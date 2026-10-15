@@ -1,0 +1,48 @@
+# Doxyfile for the LICP on-board service.
+# Run from the project root:  doxygen docs/Doxyfile
+# or:                         cmake --build build --target docs
+# Output: docs/api/html/index.html
+
+PROJECT_NAME           = "LICP On-board Service"
+PROJECT_NUMBER         = 0.1.0
+PROJECT_BRIEF          = "S-MIoT satellite payload: frame checks, store-and-forward, beacon and downlinks"
+OUTPUT_DIRECTORY       = docs/api
+CREATE_SUBDIRS         = NO
+OPTIMIZE_OUTPUT_FOR_C  = YES
+EXTRACT_ALL            = NO
+EXTRACT_STATIC         = YES
+EXTRACT_PRIVATE        = NO
+HIDE_UNDOC_MEMBERS     = NO
+SORT_MEMBER_DOCS       = NO
+JAVADOC_AUTOBRIEF      = NO
+MARKDOWN_SUPPORT       = YES
+TAB_SIZE               = 4
+
+INPUT                  = README.md docs/architecture.md docs/testing.md docs/adding_features.md include src app
+FILE_PATTERNS          = *.h *.c *.md
+RECURSIVE              = YES
+EXCLUDE_PATTERNS       = */build*/*
+USE_MDFILE_AS_MAINPAGE = README.md
+
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+GENERATE_LATEX         = NO
+GENERATE_TREEVIEW      = YES
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+PREDEFINED             = LICP_WITH_LIBLORAGW=1 __attribute__(x)=
+
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = NO
+WARN_LOGFILE           = docs/api/doxygen_warnings.txt
+QUIET                  = YES
+
+HAVE_DOT               = NO
+CLASS_GRAPH            = YES

@@ -1,0 +1,71 @@
+# licp.conf.example — configuration of the LICP on-board service (licpd).
+#
+# Format: key = value, one per line. Lines starting with '#' are comments.
+# Every value below is the built-in default; delete a line to keep the default.
+# Install as /etc/licp/licp.conf on the ZSOM-F01.
+
+# ---- Identity -------------------------------------------------------------
+sat_id = 1
+# 32 hex digits. Replaced at run time by a GROUP_KEY entry in the upload plan.
+group_key = 00000000000000000000000000000000
+
+# ---- Radio plan (855-858 MHz, network note section 2) ---------------------
+first_channel_hz = 855100000
+channel_spacing_hz = 200000
+channel_count = 15
+# Emergency channels (indices): 0 = 855.1 MHz, 8 = 856.7 MHz
+sos_channels = 0,8
+downlink_hz = 856500000
+downlink_sf = 10
+downlink_bw_hz = 125000
+downlink_power_dbm = 27
+downlink_max_payload = 115
+
+# ---- Superframe timing (network note section 6.1) -------------------------
+# Start of superframe 0 in GPS milliseconds (0 = aligned to the GPS epoch).
+superframe_epoch_ms = 0
+beacon_window_ms = 3500
+slot_ms = 3500
+slot_count = 12
+# Build the beacon and plan the window this long before it opens.
+plan_ahead_ms = 500
+# Quiet time after which a new pass (and a fresh acknowledgement bitmap) starts.
+pass_gap_ms = 600000
+
+# ---- Access-probability control (network note section 6.3) ----------------
+collision_high = 0.30
+collision_low = 0.10
+decrease_factor = 0.5
+increase_step = 0.1
+
+# ---- Frame checks ---------------------------------------------------------
+max_fcnt_gap = 16384
+freq_tolerance_hz = 30000
+
+# ---- Beacon-window planner ------------------------------------------------
+dl_lead_ms = 50
+dl_gap_ms = 30
+dl_max_call_ins = 3
+
+# ---- Storage --------------------------------------------------------------
+store_path = /var/lib/licp/frames.log
+store_max_bytes = 67108864
+store_fsync_each = true
+device_table_path = /var/lib/licp/devices.bin
+device_capacity = 4096
+bitmap_size = 1024
+
+# ---- Back-ends and system -------------------------------------------------
+# rx_backend: fhss (programmable-logic receiver), sx1302 (chirp), sim
+rx_backend = fhss
+fhss_device = /dev/licp_fhss0
+# tx_backend: sx1302 (needs -DLICP_WITH_LIBLORAGW=ON), sim
+tx_backend = sx1302
+sx1302_spi = /dev/spidev0.0
+# TCP port for the on-board computer link (0 = disabled)
+obc_tcp_port = 5600
+# Hardware watchdog device; empty = disabled
+watchdog_path =
+leap_seconds = 18
+# 0 error, 1 warning, 2 info, 3 debug
+log_level = 2
