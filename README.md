@@ -42,6 +42,7 @@ licp/
 │   ├── Doxyfile                API documentation (doxygen docs/Doxyfile)
 │   ├── architecture.md         modules, data flow, formats
 │   ├── testing.md              how to test, expected results, deviations
+│   ├── deploy.md               how to get licpd onto the board
 │   └── adding_features.md      how to extend the code
 ├── include/licp/<module>/      public headers, one folder per module
 ├── src/<module>/               sources, mirroring include/
@@ -89,6 +90,48 @@ cmake -S . -B build-asan -DLICP_SANITIZE=ON && cmake --build build-asan -j && ./
 
 ## Build for the ZSOM-F01
 
+### Toolchain: match the target's glibc
+
+The toolchain's glibc must be **no newer** than the board's. glibc is backward
+compatible one way only: a binary built against an older glibc runs on a newer
+one, never the reverse. A binary built with Ubuntu's `gcc-aarch64-linux-gnu`
+(glibc 2.35) fails to start on the board with `version 'GLIBC_2.34' not found`.
+
+PetaLinux 2020.1 on the ZSOM-F01 ships **glibc 2.30**. Check your own image with
+`ldd --version` on the board.
+
+The matching toolchain is Arm's GNU Toolchain for the A-profile Architecture
+**9.2-2019.12** (GCC 9.2.1, glibc 2.30, binutils 2.33.1):
+
+```sh
+wget https://developer.arm.com/-/media/Files/downloads/gnu-a/9.2-2019.12/binrel/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu.tar.xz
+sudo mkdir -p /opt/toolchains
+sudo tar -xJf gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu.tar.xz -C /opt/toolchains
+export PATH=/opt/toolchains/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu/bin:$PATH
+```
+
+Its prefix is `aarch64-none-linux-gnu-` (Arm's naming carries a `none` vendor
+field), which is not `build.sh`'s default:
+
+```sh
+./build.sh zsom --prefix aarch64-none-linux-gnu-
+```
+
+The build prints the binary's maximum GLIBC requirement when it finishes.
+
+### Verify before deploying
+
+```sh
+file build-zsom/licpd
+aarch64-none-linux-gnu-objdump -T build-zsom/licpd | grep -o 'GLIBC_[0-9.]*' | sort -Vu
+```
+
+The highest version printed must be at or below the board's glibc. `GLIBC_2.34`
+here means the wrong compiler was used. See `docs/deploy.md` for getting the
+binary onto the board.
+
+### By hand
+
 ```sh
 cmake -S . -B build-zsom -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-aarch64-linux-gnu.cmake \
       -DCMAKE_BUILD_TYPE=Release -DLICP_BUILD_TESTS=OFF \
@@ -120,7 +163,7 @@ Every public function, type and module is documented in its header with Doxygen 
 
 ## Status
 
-The software modules are complete and pass their tests on x86-64 and on 64-bit Arm (natively and under emulation). Hardware integration remains:
+The software modules are complete and pass their tests on x86-64 and on 64-bit Arm (natively and under emulation). `licpd` has been cross-compiled and run on the ZSOM-F01 (PetaLinux 2020.1) with simulated radios; see `docs/testing.md` section 3.1. Hardware integration remains:
 
 - the SX1302 cards,
 - the frequency-hopping receiver driver,
