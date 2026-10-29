@@ -68,6 +68,19 @@ hal_args() {
     fi
 }
 
+# Print the highest GLIBC symbol version the binary needs. The target's glibc
+# must be at least this new, or the binary will not load. Needs GNU sort; a
+# silent no-op elsewhere.
+glibc_check() {
+    local bin="$1"
+    local objdump="${CROSS_PREFIX}objdump"
+    command -v "$objdump" >/dev/null 2>&1 || return 0
+    local max
+    max="$("$objdump" -T "$bin" 2>/dev/null | grep -o 'GLIBC_[0-9.]*' | sort -Vu 2>/dev/null | tail -1)" || return 0
+    [ -n "$max" ] && printf '  requires at most %s (target glibc must be this version or newer)\n' "$max"
+    return 0
+}
+
 # Build Semtech's libloragw and libtools; $1 = cross prefix ("" for this computer).
 build_hal() {
     local prefix="$1"
@@ -128,7 +141,10 @@ cmd_asan() {
 }
 
 cmd_zsom() {
-    need "${CROSS_PREFIX}gcc" "Install the cross compiler (Debian/Ubuntu: apt install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu) or set --prefix."
+    need "${CROSS_PREFIX}gcc" "Install a cross compiler whose glibc is not newer than the target's.
+  ZSOM-F01 with PetaLinux 2020.1 (glibc 2.30): Arm GNU Toolchain 9.2-2019.12,
+  prefix aarch64-none-linux-gnu- (see README).
+  The Debian/Ubuntu package gcc-aarch64-linux-gnu is glibc 2.35 and will NOT run there."
     if [ "$BUILD_HAL" -eq 1 ]; then build_hal "$CROSS_PREFIX"; fi
     local args=""
     args="$(hal_args)"
@@ -141,6 +157,7 @@ cmd_zsom() {
     if [ -z "$HAL_DIR" ]; then
         printf '%snote:%s built without the SX1302 back-end (no transmitter). Add --hal <sx1302_hal> --build-hal for flight builds.\n' "$C_ERR" "$C_OFF"
     fi
+    glibc_check "$DIR_ZSOM/licpd"
     ok "Built: $DIR_ZSOM/licpd (copy it and config/licp.conf.example to the ZSOM-F01)"
 }
 
@@ -232,7 +249,9 @@ Options:
       --hal <path>         sx1302_hal source tree: enables the SX1302 radio back-end
       --build-hal          Build libloragw from --hal first (cross-compiled for zsom)
       --sysroot <path>     Target sysroot for zsom / arm-test (Yocto or PetaLinux SDK)
-      --prefix <prefix>    Cross toolchain prefix (default: aarch64-linux-gnu-)
+      --prefix <prefix>    Cross toolchain prefix (default: aarch64-linux-gnu-;
+                           aarch64-none-linux-gnu- for the Arm 9.2-2019.12 toolchain,
+                           which is the one that matches PetaLinux 2020.1's glibc 2.30)
       --gtest-src <path>   Build GoogleTest from this source tree (offline machines)
   -c, --config <file>      Configuration file for 'sim' (default: generated)
   -v, --verbose            Print every command before running it
@@ -243,6 +262,7 @@ Examples:
   ./build.sh test -f 'Store.*'                      # only the storage tests
   ./build.sh asan                                   # memory and undefined-behaviour checks
   ./build.sh zsom                                   # Arm binary, no radio cards (bench)
+  ./build.sh zsom --prefix aarch64-none-linux-gnu-  # glibc 2.30 target (PetaLinux 2020.1)
   ./build.sh zsom --hal ~/sx1302_hal --build-hal    # flight build with the SX1302 back-end
   ./build.sh zsom --sysroot /opt/petalinux/sysroots/cortexa72-cortexa53-xilinx-linux
   ./build.sh arm-test                               # run the tests as Arm code on a PC
