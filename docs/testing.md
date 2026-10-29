@@ -100,7 +100,7 @@ These need the ZSOM-F01, the radio cards and the receiver. They are not covered 
 
 | # | Test | Method | Pass criterion |
 |---|---|---|---|
-| H1 | Service starts on the ZSOM-F01 | Install `licpd` and the configuration, start with systemd | Runs 24 h; no restarts; memory stable |
+| H1 | Service starts on the ZSOM-F01 | Install `licpd` and the configuration, start with the image's init system (SysV init on PetaLinux 2020.1) | Runs 24 h; no restarts; memory stable |
 | H2 | Beacon timing | Spectrum analyser or SDR on 856.5 MHz, navigation pulse-per-second as reference | Beacon starts within ±5 ms of `superframe start + 50 ms` |
 | H3 | Downlink content | Reference device or SDR decoder | Beacon decodes and its integrity tag verifies with the group key |
 | H4 | Chirp reception (demonstrations) | Lab device on channels 0–7 | Frames appear in FRAMES messages with correct metadata |
@@ -237,6 +237,20 @@ These need the ZSOM-F01, the radio cards and the receiver. They are not covered 
 | x86-64 with `-DLICP_WITH_LIBLORAGW=ON` against sx1302_hal 2.1.0 | Release | Compiles and links (no hardware run) |
 | `licpd --sim` smoke test over TCP | AddressSanitizer build | STATUS reply received; clean exit on SIGTERM; no leaks |
 
+## 3.1 Target bring-up (28 October 2026)
+
+| Platform | Build | Result |
+|---|---|---|
+| ZSOM-F01, PetaLinux 2020.1, kernel 5.4.0, glibc 2.30 | Release, cross-built with Arm GNU Toolchain 9.2-2019.12 (`aarch64-none-linux-gnu-`), `LICP_BUILD_TESTS=OFF`, no SX1302 back-end | `licpd` starts with `rx_backend`/`tx_backend` = `sim`; superframe timer runs at 45.5 s with one planned transmission (the beacon) per cycle; store created at `store_path`; clean exit on SIGINT |
+
+The binary was verified before deployment: `objdump -T` reported a maximum
+requirement of `GLIBC_2.29`, below the board's 2.30. Deployed by mounting the
+board's EXT4 root filesystem on the host and copying into `/home/root`; see
+`deploy.md`.
+
+Not yet run on the target: the on-board computer TCP link (test 1.5 was run on a
+host only), and everything in 1.6.
+
 ## 4. Deviations and open points
 
 These are known differences from the design note, or items not yet verified.
@@ -259,3 +273,5 @@ These are known differences from the design note, or items not yet verified.
 | D14 | Duty cycle | No duty-cycle limit or listen-before-talk on downlinks | Correct for a satellite in a private band; confirm against the allocation | Confirm with the band allocation |
 | D15 | Out of scope | Not included: central-system planning, device firmware, CCSDS framing, image update and memory scrubbing (operating-system level) | — | Covered by other work packages |
 | D16 | Concurrency | Single-threaded. The FRAMES reply uses a static buffer | Not re-entrant; fine for the single main loop | Keep the service single-threaded |
+| D17 | Watchdog on target | The stock PetaLinux 2020.1 image for the ZSOM-F01 has no `/dev/watchdog` (`daemon not start due to lack of /dev/watchdog` at boot) | Test H8 cannot run; no reset if the service hangs | Enable the Cadence watchdog in the device tree and kernel config, or confirm the on-board computer owns the reset path |
+| D18 | Real-time clock on target | The ZSOM-F01 RTC has no battery backup; the clock starts at the epoch and is set by a startup script. The superframe counter derives from system time | Superframe numbering and file timestamps are meaningless until the clock is set | Covered by D13 — discipline the clock with chrony against the navigation PPS |
