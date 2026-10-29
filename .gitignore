@@ -2,3 +2,7 @@ build*/
 docs/api/
 *.swp
 .vscode/
+
+# Local deployment staging and stripped binaries
+deploy-zsom/
+licpd-board
